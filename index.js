@@ -8,6 +8,7 @@ const socketIO = require("socket.io")(http, {
 });
 const sqlite3 = require("sqlite3");
 const Game = require("./src/game");
+const Players = require("./src/players");
 
 const PORT = 7777;
 const rows = 5;
@@ -17,6 +18,7 @@ const columns = 5;
 const db = new sqlite3.Database("./pokemon.db");
 
 const game = new Game(rows, columns, db);
+const players  = new Players();
 
 // Set up heartbeat interval
 setInterval(() => game.heartbeat(socketIO), 500);
@@ -28,17 +30,18 @@ game.initializePokemon().then(() => {
 
 
 socketIO.on("connection", (socket) => {
-    console.log(`User Connected: ${socket.id}`);
+    players.addPlayer(socket.id);
 
     // Send current game state to the new client
     //socket.emit("initial_state", gameState);
 
     socket.on("change_username", (data) => {
-        console.log(data);
+        players.nameChange(socket.id, data.inputValue);
         socketIO.emit(
             "recieve_event",
             `Player ${data.playerInfo.username} changed username to ${data.inputValue}`
         );
+        socketIO.emit("update_players", players.playerArray);
     });
 
     socket.on("get_state", () => {
@@ -81,6 +84,8 @@ socketIO.on("connection", (socket) => {
             "recieve_event",
             `Player ${data.playerInfo.username} changed team from ${data.playerInfo.team} to ${data.color}`
         );
+        players.teamChange(socket.id, data.color);
+        socketIO.emit("update_players", players.playerArray);
     });
 
     socket.on("refresh_board", () => {
@@ -91,6 +96,11 @@ socketIO.on("connection", (socket) => {
     socket.on("shuffle_board", () => {
         console.log("Shuffle Board");
         game.shuffleBoard();
+    });
+
+    socket.on("disconnect", () => {
+        players.removePlayer(socket.id);
+        socketIO.emit("update_players", players.playerArray);
     });
 
 });
