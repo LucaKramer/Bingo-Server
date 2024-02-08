@@ -7,105 +7,25 @@ const socketIO = require("socket.io")(http, {
     },
 });
 const sqlite3 = require("sqlite3");
+const Game = require("./src/game");
 
-const db = new sqlite3.Database("./pokemon.db");
-
-const getRandomPokemon = (excludeList, callback) => {
-    let query =
-        "SELECT Shiny, [Name] FROM pokedex WHERE Exclusive = 'No' AND [ShinyLocked] = 0 ORDER BY RANDOM() LIMIT 1";
-
-    db.get(query, (err, row) => {
-        if (err) {
-            console.error(err.message);
-            callback(null);
-        } else {
-            callback(row ? { pokemonName: row.Name, pokemonImage: row.Shiny } : null);
-        }
-    });
-};
-
-setInterval(heartbeat, 500);
-
-function heartbeat() {
-    socketIO.emit("initial_state", gameState);
-}
-
-// Initialize the gameState
+const PORT = 7777;
 const rows = 5;
 const columns = 5;
-function create2DArray(
-    rows,
-    columns,
-    initialValue = {
-        coords: [],
-        color: ["white"],
-        pokemonImage: "",
-        pokemonName: "",
-    }
-) {
-    const result = [];
-    for (let i = 0; i < rows; i++) {
-        result.push(Array(columns).fill({ ...initialValue }));
-    }
-    return result;
-}
 
-let gameState = create2DArray(rows, columns);
+// Set up SQLite database connection
+const db = new sqlite3.Database("./pokemon.db");
 
-function shuffle2DArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        for (let j = array[i].length - 1; j > 0; j--) {
-            const randRow = Math.floor(Math.random() * (i + 1));
-            const randCol = Math.floor(Math.random() * (j + 1));
+const game = new Game(rows, columns, db);
 
-            // Swap elements
-            [array[i][j], array[randRow][randCol]] = [
-                array[randRow][randCol],
-                array[i][j],
-            ];
-        }
-    }
-}
+// Set up heartbeat interval
+setInterval(() => game.heartbeat(socketIO), 500);
 
-const initializePokemon = async () => {
-    const selectedPokemonNames = new Set();
-    for (let i = 0; i < rows * columns; i++) {
-        for (let j = 0; j < columns; j++) {
-            let pokemonData;
-            do {
-                pokemonData = await new Promise((resolve) => {
-                    getRandomPokemon([selectedPokemonNames], (data) => {
-                        resolve(data);
-                    });
-                });
-            } while (
-                !pokemonData ||
-                isPokemonNameInColumn(pokemonData.pokemonName, j)
-                );
-            gameState[i][j] = {
-                coords: [i, j],
-                color: ["white"],
-                pokemonName: pokemonData.pokemonName,
-                pokemonImage: pokemonData.pokemonImage,
-            };
-            selectedPokemonNames.add(pokemonData.pokemonName);
-        }
-    }
-    selectedPokemonNames.clear();
-};
-
-const isPokemonNameInColumn = (pokemonName, column) => {
-    for (let i = 0; i < rows; i++) {
-        if (gameState[i][column].pokemonName === pokemonName) {
-            return true;
-        }
-    }
-    return false;
-};
-
-initializePokemon().then(() => {
+// Initialize the gameState
+game.initializePokemon().then(() => {
     // Start your server or perform any other actions after initialization
 });
+
 
 socketIO.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
@@ -128,7 +48,7 @@ socketIO.on("connection", (socket) => {
     socket.on("send_field", (data) => {
         console.log(data);
 
-        const colors = gameState[data.coords[0]][data.coords[1]].color;
+        const colors = game.gameState[data.coords[0]][data.coords[1]].color;
         const team = data.playerInfo.team;
         const teamIndex = colors.indexOf(team);
         if (teamIndex != -1) {
@@ -151,7 +71,7 @@ socketIO.on("connection", (socket) => {
             colors.push("white");
         }
 
-        gameState[data.coords[0]][data.coords[1]].color = colors;
+        game.gameState[data.coords[0]][data.coords[1]].color = colors;
 
         //socketIO.emit("color_update", data);
     });
@@ -165,17 +85,16 @@ socketIO.on("connection", (socket) => {
 
     socket.on("refresh_board", () => {
         console.log("Refreshed Board");
-        gameState = create2DArray(rows, columns);
-        initializePokemon();
-        //socketIO.emit("initial_state", gameState);
+        game.initializePokemon();
     });
 
     socket.on("shuffle_board", () => {
         console.log("Shuffle Board");
-        shuffle2DArray(gameState);
+        game.shuffleBoard();
     });
+
 });
 
-http.listen(3001, () => {
-    console.log("Listening on *:3001!");
+http.listen(7777, () => {
+    console.log("Listening on *:7777!");
 });
