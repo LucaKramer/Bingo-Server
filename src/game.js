@@ -38,30 +38,41 @@ class Game {
     }
 
     async initializePokemon() {
-        const selectedPokemonNames = new Set();
+        const allPokemonNames = new Set();
+
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.columns; j++) {
                 let pokemonData;
+                let isDuplicate;
+
                 do {
+                    isDuplicate = false;
+
                     pokemonData = await new Promise((resolve) => {
-                        this.getRandomPokemon([selectedPokemonNames], (data) => {
+                        this.getRandomPokemon([...allPokemonNames], (data) => {
                             resolve(data);
                         });
                     });
-                } while (
-                    !pokemonData ||
-                    this.isPokemonNameInColumn(pokemonData.pokemonName, j)
-                    );
+
+                    if (allPokemonNames.has(pokemonData.pokemonName)) {
+                        isDuplicate = true;
+                    }
+
+                } while (isDuplicate);
+
                 this.gameState[i][j] = {
                     coords: [i, j],
                     color: ["white"],
                     pokemonName: pokemonData.pokemonName,
                     pokemonImage: pokemonData.pokemonImage,
                 };
-                selectedPokemonNames.add(pokemonData.pokemonName);
+
+                allPokemonNames.add(pokemonData.pokemonName);
             }
         }
-        selectedPokemonNames.clear();
+
+        // Clear the set after initializing the entire board
+        allPokemonNames.clear();
     }
 
     shuffleBoard() {
