@@ -22,6 +22,8 @@ const game = new Game(rows, columns, db);
 const players  = new Players();
 const clients = {};
 
+let activeTeams = [];
+
 // Set up heartbeat interval
 setInterval(() => game.heartbeat(socketIO), 500);
 
@@ -82,14 +84,20 @@ socketIO.on("connection", (socket) => {
         //socketIO.emit("color_update", data);
     });
 
-    socket.on('videoStream', ({ frame, team})  => {
-        socketIO.emit(`videoStream-${team}`, frame);
+    socket.on('videoStream', ({ frame, team, name})  => {
+        socketIO.emit(`videoStream-${team}`, {frame, name});
+        if (!activeTeams.includes(team)){
+            activeTeams.push(team);
+        }
+        socketIO.emit('activeTeams', {activeTeams});
     });
 
-    socket.on('nameChange', ({name, team}) => {
-        socketIO.emit(`nameChange-${team}`, name);
-        console.log(name);
-        console.log(team);
+    socket.on('leaveTeam', (team) => {
+        // Remove the team from the activeTeams array
+        activeTeams = activeTeams.filter((activeTeam) => activeTeam !== team);
+
+        // Emit the updated list of active teams to all clients
+        socketIO.emit('activeTeams', { activeTeams });
     });
 
     socket.on("change_team", (data) => {
