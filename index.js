@@ -7,6 +7,7 @@ const socketIO = require("socket.io")(http, {
     },
 });
 const sqlite3 = require("sqlite3");
+
 const Game = require("./src/game");
 const Players = require("./src/players");
 
@@ -19,6 +20,7 @@ const db = new sqlite3.Database("./pokemon.db");
 
 const game = new Game(rows, columns, db);
 const players  = new Players();
+const clients = {};
 
 // Set up heartbeat interval
 setInterval(() => game.heartbeat(socketIO), 500);
@@ -34,6 +36,7 @@ socketIO.on("connection", (socket) => {
 
     // Send current game state to the new client
     //socket.emit("initial_state", gameState);
+
 
     socket.on("change_username", (data) => {
         players.nameChange(socket.id, data.inputValue);
@@ -79,6 +82,16 @@ socketIO.on("connection", (socket) => {
         //socketIO.emit("color_update", data);
     });
 
+    socket.on('videoStream', ({ frame, team})  => {
+        socketIO.emit(`videoStream-${team}`, frame);
+    });
+
+    socket.on('nameChange', ({name, team}) => {
+        socketIO.emit(`nameChange-${team}`, name);
+        console.log(name);
+        console.log(team);
+    });
+
     socket.on("change_team", (data) => {
         socketIO.emit(
             "recieve_event",
@@ -101,6 +114,8 @@ socketIO.on("connection", (socket) => {
     socket.on("disconnect", () => {
         players.removePlayer(socket.id);
         socketIO.emit("update_players", players.playerArray);
+        delete clients[socket.id];
+        socket.broadcast.emit('stream', null);
     });
 
 });
