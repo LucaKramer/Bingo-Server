@@ -1,17 +1,26 @@
-const express = require("express");
+const express = require('express');
+const https = require('https');
+const socket = require('socket.io');
+const fs = require("fs");
+const cors = require('cors');
+
 const app = express();
-const http = require("http").createServer(app);
-const socketIO = require("socket.io")(http, {
+const privateKey = fs.readFileSync("privkey.pem", "utf8");
+const certificate = fs.readFileSync("fullchain.pem", "utf8");
+const credentials = { key: privateKey, cert: certificate };
+const server = https.createServer(credentials ,app);
+const socketIO = socket(server, {
     cors: {
-        origin: "*",
-    },
+        origin: "https://shinydust.de",
+        methods: ["GET", "POST"]
+    }
 });
+
 const sqlite3 = require("sqlite3");
 
 const Game = require("./src/game");
 const Players = require("./src/players");
 
-const PORT = 7777;
 const rows = 5;
 const columns = 5;
 
@@ -23,6 +32,9 @@ const players  = new Players();
 const clients = {};
 
 let activeTeams = [];
+const activeStreams = [];
+
+app.use(cors());
 
 // Set up heartbeat interval
 setInterval(() => game.heartbeat(socketIO), 500);
@@ -32,9 +44,38 @@ game.initializePokemon().then(() => {
     // Start your server or perform any other actions after initialization
 });
 
+// Define a route for the root path
+app.get('/', (req, res) => {
+    res.header('Access-Control-Allow-Origin', 'https://shinydust.de');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', true);
 
-socketIO.on("connection", (socket) => {
+    res.send('Hello, this is your Express server with Socket.IO!');
+});
+
+// Set up a connection event for Socket.IO
+socketIO.on('connection', (socket) => {
     players.addPlayer(socket.id);
+
+    socketIO.to(socket.id).emit('activeStreams', activeStreams);
+
+    socket.on('startStream', (data) => {
+        // Assuming the link is the stream identifier
+        activeStreams.push({ id: socket.id, link: data.link, team: data.team, name: data.name });
+        socketIO.emit('activeStreams', activeStreams);
+        console.log(`Started stream: ${data.link}`);
+    });
+
+    socket.on('closeStream', () => {
+        // Close active stream for the specific socket connection
+        const index = activeStreams.findIndex((stream) => stream.id === socket.id);
+        if (index !== -1) {
+            const closedStream = activeStreams.splice(index, 1)[0];
+            socketIO.emit('activeStreams', activeStreams);
+            console.log(`Closed stream: ${closedStream}`);
+        }
+    });
 
     // Send current game state to the new client
     //socket.emit("initial_state", gameState);
@@ -84,14 +125,6 @@ socketIO.on("connection", (socket) => {
         //socketIO.emit("color_update", data);
     });
 
-    socket.on('videoStream', ({ frame, team, name})  => {
-        socketIO.emit(`videoStream-${team}`, {frame, name});
-        if (!activeTeams.includes(team)){
-            activeTeams.push(team);
-        }
-        socketIO.emit('activeTeams', {activeTeams});
-    });
-
     socket.on('leaveTeam', (team) => {
         // Remove the team from the activeTeams array
         activeTeams = activeTeams.filter((activeTeam) => activeTeam !== team);
@@ -123,11 +156,18 @@ socketIO.on("connection", (socket) => {
         players.removePlayer(socket.id);
         socketIO.emit("update_players", players.playerArray);
         delete clients[socket.id];
-        socket.broadcast.emit('stream', null);
-    });
 
+        const index = activeStreams.findIndex((stream) => stream.id === socket.id);
+        if (index !== -1) {
+            const disconnectedStream = activeStreams.splice(index, 1)[0];
+            socketIO.emit('activeStreams', activeStreams);
+            console.log(`User disconnected: ${disconnectedStream.id}`);
+        }
+    });
 });
 
-http.listen(7777, () => {
-    console.log("Listening on *:7777!");
+// Start the server on port 7777
+const PORT = 7777;
+server.listen(PORT, () => {
+    console.log(`Server is running on https://localhost:${PORT}`);
 });
