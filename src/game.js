@@ -12,7 +12,22 @@ const ballList = [
     "https://www.serebii.net/itemdex/sprites/sv/greatball.png",
     "https://www.serebii.net/itemdex/sprites/sv/duskball.png",
     "https://www.serebii.net/itemdex/sprites/sv/diveball.png",
+    "apriko"
 ];
+
+const aprikoBallList = [
+    "https://www.serebii.net/itemdex/sprites/sv/beastball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/dreamball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/fastball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/friendball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/heavyball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/levelball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/loveball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/lureball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/masterball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/moonball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/safariball.png",
+]
 
 class Game {
     constructor(rows, columns, db) {
@@ -81,6 +96,10 @@ class Game {
                 if(generateBall) {
                     var randomIndex = Math.floor(Math.random() * ballList.length);
                     randomBall = ballList[randomIndex];
+                    if(randomBall === "apriko"){
+                        randomIndex = Math.floor(Math.random() * aprikoBallList.length);
+                        randomBall = aprikoBallList[randomIndex];
+                    }
                 };
 
                 this.gameState[i][j] = {
