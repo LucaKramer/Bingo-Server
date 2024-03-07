@@ -80,8 +80,8 @@ class Game {
                 var randomBall = "";
                 if(generateBall) {
                     var randomIndex = Math.floor(Math.random() * ballList.length);
-                    randomBall = ballList[randomIndex],
-                }
+                    randomBall = ballList[randomIndex];
+                };
 
                 this.gameState[i][j] = {
                     coords: [i, j],
