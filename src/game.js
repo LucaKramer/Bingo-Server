@@ -1,3 +1,19 @@
+const ballList = [
+    "https://www.serebii.net/itemdex/sprites/sv/ultraball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/timerball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/repeatball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/quickball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/premierball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/pokeball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/netball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/nestball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/luxuryball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/healball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/greatball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/duskball.png",
+    "https://www.serebii.net/itemdex/sprites/sv/diveball.png",
+];
+
 class Game {
     constructor(rows, columns, db) {
         this.rows = rows;
@@ -6,7 +22,7 @@ class Game {
         this.gameState = this.create2DArray(rows, columns);
     }
 
-    create2DArray(rows, columns, initialValue = { coords: [], color: ["white"], pokemonImage: "", pokemonName: "" }) {
+    create2DArray(rows, columns, initialValue = { coords: [], states: { red: 0, blue: 0, orange: 0, green: 0, purple: 0 }, pokemonImage: "", Name: "", ball: "" }) {
         const result = [];
         for (let i = 0; i < rows; i++) {
             result.push(Array(columns).fill({ ...initialValue }));
@@ -60,11 +76,13 @@ class Game {
 
                 } while (isDuplicate);
 
+                const randomIndex = Math.floor(Math.random() * ballList.length);
+
                 this.gameState[i][j] = {
                     coords: [i, j],
-                    color: ["white"],
-                    pokemonName: pokemonData.pokemonName,
+                    name: pokemonData.pokemonName,
                     pokemonImage: pokemonData.pokemonImage,
+                    ball: ballList[randomIndex],
                 };
 
                 allPokemonNames.add(pokemonData.pokemonName);
@@ -88,6 +106,46 @@ class Game {
                     array[i][j],
                 ];
             }
+        }
+    }
+
+    shiftRow(rowIndex, direction) {
+        if (rowIndex < 0 || rowIndex >= this.rows) {
+            console.log("Invalid row index.");
+            return;
+        }
+
+        const rowToShift = this.gameState[rowIndex];
+        if (direction === 'left') {
+            const shiftedRow = [...rowToShift.slice(1), rowToShift[0]];
+            this.gameState[rowIndex] = shiftedRow;
+        } else if (direction === 'right') {
+            const shiftedRow = [rowToShift[this.columns - 1], ...rowToShift.slice(0, this.columns - 1)];
+            this.gameState[rowIndex] = shiftedRow;
+        } else {
+            console.log("Invalid direction for shifting row.");
+        }
+    }
+
+    shiftColumn(columnIndex, direction) {
+        if (columnIndex < 0 || columnIndex >= this.columns) {
+            console.log("Invalid column index.");
+            return;
+        }
+
+        const columnToShift = this.gameState.map(row => row[columnIndex]);
+        if (direction === 'down') {
+            const shiftedColumn = [columnToShift[this.rows - 1], ...columnToShift.slice(0, this.rows - 1)];
+            for (let i = 0; i < this.rows; i++) {
+                this.gameState[i][columnIndex] = shiftedColumn[i];
+            }
+        } else if (direction === 'up') {
+            const shiftedColumn = [...columnToShift.slice(1), columnToShift[0]];
+            for (let i = 0; i < this.rows; i++) {
+                this.gameState[i][columnIndex] = shiftedColumn[i];
+            }
+        } else {
+            console.log("Invalid direction for shifting column.");
         }
     }
 

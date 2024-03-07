@@ -97,32 +97,33 @@ socketIO.on('connection', (socket) => {
     socket.on("send_field", (data) => {
         console.log(data);
 
-        const colors = game.gameState[data.coords[0]][data.coords[1]].color;
-        const team = data.playerInfo.team;
-        const teamIndex = colors.indexOf(team);
-        if (teamIndex != -1) {
-            colors.splice(teamIndex, 1);
-            socketIO.emit(
-                "recieve_event",
-                `Player ${data.playerInfo.username} (${data.playerInfo.team}) unmarked field ${data.coords[0]}, ${data.coords[1]}`
-            );
-        } else {
-            colors.push(team);
-            colors.sort();
+        const { coords, playerInfo } = data;
+        const { team } = playerInfo;
+
+        const color = team.toLowerCase();
+
+        const currentState = game.gameState[coords[0]][coords[1]].states[color];
+
+        game.gameState[coords[0]][coords[1]].states[color] = (currentState + 1) % 3;
+
+        if(currentState == 0){
             socketIO.emit(
                 "recieve_event",
                 `Player ${data.playerInfo.username} (${data.playerInfo.team}) marked field ${data.coords[0]}, ${data.coords[1]}`
             );
-
+            socketIO.emit("shiny_animation", {coords: data.coords, color: data.playerInfo.team});
             socketIO.emit("play_sound", data.playerInfo.team);
+        }else if(currentState == 1){
+            socketIO.emit(
+                "recieve_event",
+                `Player ${data.playerInfo.username} (${data.playerInfo.team}) unmarked field ${data.coords[0]}, ${data.coords[1]}`
+            );
+        }else{
+            socketIO.emit(
+                "recieve_event",
+                `Player ${data.playerInfo.username} (${data.playerInfo.team}) marked field ${data.coords[0]}, ${data.coords[1]} as blocked`
+            );
         }
-        if (colors.length == 0) {
-            colors.push("white");
-        }
-
-        game.gameState[data.coords[0]][data.coords[1]].color = colors;
-
-        //socketIO.emit("color_update", data);
     });
 
     socket.on('leaveTeam', (team) => {
@@ -150,6 +151,14 @@ socketIO.on('connection', (socket) => {
     socket.on("shuffle_board", () => {
         console.log("Shuffle Board");
         game.shuffleBoard();
+    });
+    
+    socket.on("shift_left_right", (data) => {
+        game.shiftRow(data.row-1, data.direction);
+    });
+    
+    socket.on("shift_up_down", (data) => {
+        game.shiftColumn(data.column-1, data.direction);
     });
 
     socket.on("disconnect", () => {
