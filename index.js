@@ -143,9 +143,9 @@ socketIO.on('connection', (socket) => {
         socketIO.emit("update_players", players.playerArray);
     });
 
-    socket.on("refresh_board", () => {
+    socket.on("refresh_board", (generatePokemon) => {
         console.log("Refreshed Board");
-        game.initializePokemon();
+        game.initializePokemon(generatePokemon);
     });
 
     socket.on("shuffle_board", () => {

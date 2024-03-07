@@ -53,7 +53,7 @@ class Game {
         return false;
     }
 
-    async initializePokemon() {
+    async initializePokemon(generateBall) {
         const allPokemonNames = new Set();
 
         for (let i = 0; i < this.rows; i++) {
@@ -76,13 +76,18 @@ class Game {
 
                 } while (isDuplicate);
 
-                const randomIndex = Math.floor(Math.random() * ballList.length);
+
+                var randomBall = "";
+                if(generateBall) {
+                    var randomIndex = Math.floor(Math.random() * ballList.length);
+                    randomBall = ballList[randomIndex],
+                }
 
                 this.gameState[i][j] = {
                     coords: [i, j],
                     name: pokemonData.pokemonName,
                     pokemonImage: pokemonData.pokemonImage,
-                    ball: ballList[randomIndex],
+                    ball: randomBall,
                 };
 
                 allPokemonNames.add(pokemonData.pokemonName);
