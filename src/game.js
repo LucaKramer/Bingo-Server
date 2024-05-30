@@ -37,7 +37,7 @@ class Game {
         this.gameState = this.create2DArray(rows, columns);
     }
 
-    create2DArray(rows, columns, initialValue = { coords: [], states: { red: 0, blue: 0, orange: 0, green: 0, purple: 0 }, pokemonImage: "", name: "", ball: "" }) {
+    create2DArray(rows, columns, initialValue = { coords: [], states: { red: 0, blue: 0, orange: 0, green: 0, purple: 0 }, pokemonImage: "", name: "", ball: ""}) {
         const result = [];
         for (let i = 0; i < rows; i++) {
             result.push(Array(columns).fill({ ...initialValue }));
